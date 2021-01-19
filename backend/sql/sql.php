@@ -68,16 +68,6 @@ class sql extends mysqli
         return $result;
     }
 
-    public function getAllThreadsWithnNoModerated()
-    {
-        $stmt = $this->prepare("SELECT * FROM threads where moderated = 0 ORDER BY time DESC");
-        $stmt->execute();
-        if ($stmt->errno != 0) throw new RuntimeException($stmt->error, $stmt->errno);
-        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmt->close();
-        return $result;
-    }
-
     public function getAllThreadsModerated()
     {
         $stmt = $this->prepare("SELECT * FROM threads where moderated = 1 ORDER BY time DESC");
@@ -117,5 +107,37 @@ class sql extends mysqli
         $stmt->execute();
         if ($stmt->errno != 0) throw new RuntimeException($stmt->error, $stmt->errno);
         $stmt->close();
+    }
+
+    public function getAllThreadsNoModerated()
+    {
+        $stmt = $this->prepare("SELECT * FROM threads where moderated = 0 ORDER BY time DESC");
+        $stmt->execute();
+        if ($stmt->errno != 0) throw new RuntimeException($stmt->error, $stmt->errno);
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
+
+    public function getAllReactions($thread_id)
+    {
+        $stmt = $this->prepare("SELECT * FROM `reactions` where thread_id = ? ORDER BY time DESC");
+        $stmt->bind_param("i", $thread_id);
+        $stmt->execute();
+        if ($stmt->errno != 0) throw new RuntimeException($stmt->error, $stmt->errno);
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
+
+    public function addReaction($thread_id, $text)
+    {
+        $stmt = $this->prepare("INSERT INTO reactions (`thread_id`, `author_id`, `text`) VALUES (?,?,?)");
+        $stmt->bind_param("iis", $thread_id, $_COOKIE['id'], $text);
+        $stmt->execute();
+        if ($stmt->errno != 0) throw new RuntimeException($stmt->error, $stmt->errno);
+        $output = $stmt->insert_id;
+        $stmt->close();
+        return $output;
     }
 }

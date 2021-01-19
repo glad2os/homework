@@ -1,76 +1,47 @@
 <?php
-ini_set('error_reporting', E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 
-
-if (!($_GET['login'] == "admin" && $_GET['password'] == "123")) {
+if (!(isset($_GET['login']) or isset($_GET['password']))) {
     echo <<<HTML
 <form action="admin.php" method="get">
-    <input type="text" name="login" placeholder="login"><input type="password" name="password" placeholder="password">
-    <input type="submit">
+<input type="text" name="login" value="admin"><input type="password"  value="" name="password"><input type="submit">
 </form>
 HTML;
 
     die();
 }
 
+if (!($_GET['login'] == "admin" and $_GET['password'] == "")) {
+    echo "Пароль неверный";
+    die;
+}
+
 include_once __DIR__ . "/backend/sql/sql.php";
 
 $sql = new sql();
 
-if (!empty(json_decode(file_get_contents("php://input"), true))) {
-    $content = json_decode(file_get_contents("php://input"),true);
-    $sql->moderatePost($content['id']);
-    die();
-}
+if (!isset($_GET['id'])) {
 
+    $getAllThreadsNoModerated = $sql->getAllThreadsNoModerated();
+    echo "Вы вошли как администратор <br>";
+    echo "<a href='logout.php'>Выйти</a> <br>";
 
-$getAllThreadsWithnNoModerated = $sql->getAllThreadsWithnNoModerated();
-echo "<h1>Ожидают модерацию</h1> <br>";
+    echo "<h1>Все посты требуемые проверку:</h1>";
 
-$token = md5($_GET['password']); //PASSWD
+    foreach ($getAllThreadsNoModerated as $item) {
 
-foreach ($getAllThreadsWithnNoModerated as $item) {
-
-    print "Автор: " . $sql->getAuthorsOfThread($item['id'])["login"] . "<br>";
-    print <<<HTML
-    <textarea name="text">
+        print "Автор: " . $sql->getAuthorsOfThread($item['id'])["login"] . " | " . $item["time"] . "<br>";
+        print "<h2>{$item['title']}</h2>";
+        print <<<HTML
+    <p>
         {$item['text']}
-    </textarea> <br>
-    
+    </p> <br>
+    <hr style="width: 50%">
+    <a href="?login=admin&password=&id={$item['id']}">Разрешить публикацию</a>
 HTML;
 
-    print $item['time'] . "<br> <hr>";
-    print <<<HTML
-<a href="#" onclick="applypost({$item['id']});">Разрешить публикацию</a> <br>
-HTML;
-
+    }
+} else {
+    echo "Пост опубликован";
+    $sql->moderatePost($_GET['id']);
+    header("Location: /admin.php?login=admin&password=");
 }
-
-?>
-
-<script>
-    function request(target, body, callback = nop, fallbackCallback = e => alert(e["issueMessage"])) {
-        const request = new XMLHttpRequest();
-        request.open("POST", `/` + target, true);
-        request.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-        request.responseType = "json";
-        request.onreadystatechange = () => {
-            if (request.readyState === XMLHttpRequest.DONE) {
-                if (request.status === 200) callback(request.response);
-                if (request.status === 204) callback(request.response);
-                else fallbackCallback(request.response);
-            }
-        };
-        request.send(JSON.stringify(body));
-    }
-
-    function applypost(id) {
-        request('admin.php?login=admin&password=123', {
-            "id": id
-        }, () => {
-            document.location.reload();
-        });
-    }
-</script>
